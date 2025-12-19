@@ -23,7 +23,7 @@ add_subdirectory(libcerf/libcpp)
 add_subdirectory(function2)
 
 
-target_link_libraries(wave_tracer PUBLIC
+target_link_libraries(wave_core PUBLIC
     mp-units::mp-units
     Sockpp::sockpp
     cerfcpp
@@ -33,7 +33,7 @@ target_link_libraries(wave_tracer PUBLIC
     githash
 )
 
-target_include_directories(wave_tracer PRIVATE 
+target_include_directories(wave_core PUBLIC
     CLI11/include
 
     thread-pool/include
@@ -62,7 +62,7 @@ target_include_directories(wave_tracer PRIVATE
 
 # GUI
 if(BUILD_GUI)
-    target_sources(wave_tracer PRIVATE
+    target_sources(wave_core PUBLIC
         imgui/imgui.cpp
         imgui/imgui_draw.cpp
         imgui/imgui_tables.cpp
@@ -79,7 +79,7 @@ if(BUILD_GUI)
         implot/implot_items.cpp
     )
 
-    target_include_directories(wave_tracer PRIVATE 
+    target_include_directories(wave_core PUBLIC
         imgui
         implot
         imgui_toggle

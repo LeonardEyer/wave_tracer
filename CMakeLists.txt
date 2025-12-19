@@ -42,7 +42,7 @@ project(wave_tracer VERSION 0.1.0 LANGUAGES CXX)
 # sources
 set(SRC
 
-    src/main.cpp
+    #src/main.cpp
     src/version.cpp
 
     src/static_tests.cpp
@@ -168,6 +168,8 @@ set(SRC
     src/util/statistics_collector/stat_histogram.cpp
 )
 
+add_library(wave_core STATIC ${SRC})
+add_library(wave_tracer::core ALIAS wave_core)
 
 # -- CMake flags --
 option(BUILD_GUI "Add graphical user interface support" ON)
@@ -187,7 +189,7 @@ if(APPLE)
     endforeach()
 
     add_executable(wave_tracer MACOSX_BUNDLE
-        ${SRC}
+        src/main.cpp
         ${RESOURCES}
     )
 
@@ -199,8 +201,8 @@ if(APPLE)
         # MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/cmake/Info.plist.in"
     )
 else()
-    add_executable(wave_tracer ${SRC})
-endif()
+    add_executable(wave_tracer src/main.cpp)
+  endif()
 
 
 # -- compilation options --
@@ -243,11 +245,11 @@ if(SIMD_AVX AND NOT IS_ARM_ARCH)
     add_compile_definitions(SIMD_AVX)
     add_compile_definitions(__AVX2__)
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-        target_compile_options(wave_tracer PRIVATE
+        target_compile_options(wave_core PUBLIC
             /arch:AVX2
         )
     else()
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             -mavx -mavx2
         )
     endif()
@@ -260,11 +262,11 @@ if(SIMD_AVX AND NOT IS_ARM_ARCH AND DBL_PRECISION)
     message("Compiling with double-precision and AVX: ensure target has AVX512f/dq support")
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-        target_compile_options(wave_tracer PRIVATE
+        target_compile_options(wave_core PUBLIC
             /arch:AVX512
         )
     else()
-        target_compile_options(wave_tracer PRIVATE
+        target_compile_options(wave_core PUBLIC
             -mavx512f -mavx512dq
         )
     endif()
@@ -282,7 +284,7 @@ endif()
 # -- compiler flags --
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    target_compile_options(wave_tracer PRIVATE
+    target_compile_options(wave_core PUBLIC
 	-march=native
         -pipe 
         -funroll-loops
@@ -294,11 +296,11 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         -Wdisabled-optimization
         -Wno-psabi
     )
-    target_link_options(wave_tracer PRIVATE
+    target_link_options(wave_coure PUBLIC
         -Wno-psabi
     )
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    target_compile_options(wave_tracer PRIVATE
+    target_compile_options(wave_core PUBLIC
 	-march=native
         -pipe 
         -funroll-loops
@@ -306,7 +308,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wunused-but-set-variable
         -Wno-psabi
     )
-    target_link_options(wave_tracer PRIVATE
+    target_link_options(wave_core PUBLIC
         -Wno-psabi
     )
 endif()
@@ -318,20 +320,20 @@ if(build_type STREQUAL debug)
     set_property(TARGET wave_tracer PROPERTY INTERPROCEDURAL_OPTIMIZATION False)
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             /Odi
             /Zi
             /fsanitize=address
         )
-        target_link_options(wave_tracer PRIVATE
+        target_link_options(wave_core PUBLIC
             /DEBUG
         )
     else()
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             -g -O0
             -fsanitize=undefined -fsanitize=address
         )
-        target_link_options(wave_tracer PRIVATE
+        target_link_options(wave_core PUBLIC
             -g -O0
             -fsanitize=undefined -fsanitize=address
         )
@@ -345,18 +347,18 @@ if(build_type STREQUAL debugog)
     set_property(TARGET wave_tracer PROPERTY INTERPROCEDURAL_OPTIMIZATION False)
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             /Odi /GS
             /Zi
         )
-        target_link_options(wave_tracer PRIVATE
+        target_link_options(wave_core PUBLIC
             /DEBUG
         )
     else()
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             -g -Og
         )
-        target_link_options(wave_tracer PRIVATE
+        target_link_options(wave_core PUBLIC
             -g -Og
         )
     endif()
@@ -370,15 +372,15 @@ if(build_type STREQUAL release)
     set_property(TARGET wave_tracer PROPERTY INTERPROCEDURAL_OPTIMIZATION True)
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             /O2 /Oy
         )
     else()
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             -O3 -fomit-frame-pointer
             -ftree-vectorize -flto=auto
         )
-        target_link_options(wave_tracer PRIVATE
+        target_link_options(wave_core PUBLIC
             -O3
             -flto=auto
         )
@@ -398,15 +400,15 @@ if(build_type STREQUAL profile)
     set_property(TARGET wave_tracer PROPERTY INTERPROCEDURAL_OPTIMIZATION True)
 
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             /O2 /Oy
         )
     else()
-        target_compile_options(wave_tracer PRIVATE 
+        target_compile_options(wave_core PUBLIC
             -O3 -g -fomit-frame-pointer
             -ftree-vectorize -flto=auto
         )
-        target_link_options(wave_tracer PRIVATE
+        target_link_options(wave_core PUBLIC
             -O3 -g
             -flto=auto
         )
@@ -426,14 +428,14 @@ find_package(yaml-cpp CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
 
 
-target_include_directories(wave_tracer PRIVATE 
+target_include_directories(wave_core PUBLIC
     include
 
     ${OPENEXR_INCLUDE_DIRS}
     ${FREETYPE_INCLUDE_DIRS}
 )
 
-target_link_libraries(wave_tracer PRIVATE
+target_link_libraries(wave_core PUBLIC
     stdc++fs atomic
 
     PNG::PNG
@@ -450,10 +452,10 @@ target_link_libraries(wave_tracer PRIVATE
 if(BUILD_GUI)
     find_package(SDL3 CONFIG REQUIRED)
 
-    target_include_directories(wave_tracer PRIVATE 
+    target_include_directories(wave_core PUBLIC 
         ${SDL3_INCLUDE_DIRS}
     )
-    target_link_libraries(wave_tracer PRIVATE
+    target_link_libraries(wave_core PUBLIC
         SDL3::SDL3
     )
 endif(BUILD_GUI)
@@ -478,7 +480,7 @@ if(BUILD_GUI)
 
     find_package(GLEW CONFIG REQUIRED)
 
-    target_sources(wave_tracer PRIVATE
+    target_sources(wave_core PUBLIC
         src/util/gui/fonts.cpp
         src/util/gui/gui.cpp
         src/util/gui/init.cpp
@@ -489,20 +491,24 @@ if(BUILD_GUI)
         src/util/gui/imgui_tex_inspect/imgui_tex_inspect_opengl.cpp
     )
 
-    target_include_directories(wave_tracer PRIVATE 
+    target_include_directories(wave_core PUBLIC 
         ${GLEW_INCLUDE_DIRS}
     )
 
-    target_link_libraries(wave_tracer PUBLIC
+    target_link_libraries(wave_core PUBLIC
         GL
         GLEW::GLEW
     )
 endif(BUILD_GUI)
 
+target_link_libraries(wave_tracer PRIVATE wave_core)
+
 
 # deps
 add_subdirectory(deps)
 
+# add a playground
+add_subdirectory(playground)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

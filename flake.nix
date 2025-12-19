@@ -25,6 +25,7 @@
             ninja
             pkg-config
             ccache
+            clang-tools
 
             # --- Version Control ---
             git
