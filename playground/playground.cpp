@@ -9,48 +9,62 @@
 #include "wt/math/shapes/elliptic_cone.hpp"
 #include "wt/math/shapes/ray.hpp"
 #include "wt/math/unit_vector/unit_vector.hpp"
+#include "wt/mesh/sphere.hpp"
+#include "wt/sampler/uniform.hpp"
 #include "wt/sensor/sensor/perspective.hpp"
 #include "wt/sensor/sensor/virtual_plane_sensor.hpp"
 #include "wt/spectrum/uniform.hpp"
 #include "wt/texture/texture.hpp"
+#include "wt/bsdf/diffuse.hpp"
 
 #include <iostream>
 
 int main(int argc, char **argv) {
+
+  auto ctx = wt::wt_context_t{};
 
   wt::QE_area_t scale = 1 * wt::area_t::unit;
 
   wt::frequency_t f = 100 * wt::u::Hz;
   auto c = 343.0 * (wt::u::m / wt::u::s); // speed of sound
 
-  wt::wavelength_t lambda = 675 * wt::u::nm;//c / f;
+  wt::wavelength_t lambda = 675 * wt::u::nm; // c / f;
   wt::wavenumber_t k = wt::wavelen_to_wavenum(lambda);
+
+  std::cout << "Simulating at a wavelength of " << value_cast<wt::u::m>(lambda)
+            << " (" << value_cast<wt::u::Hz>(f) << ")" << std::endl;
+
+  const auto origin = wt::vec3_t(0) * wt::u::m;
+  auto sphere = wt::mesh::sphere_t::create("sphere", ctx, origin, 1. * wt::u::m,
+                                           wt::transform_d_t{});
+
+  auto spectrum_uniform =
+      std::make_shared<wt::spectrum::uniform_t>("uniform", wt::f_t(1));
+
+  auto specrum_uniform2 =
+      std::make_shared<wt::spectrum::uniform_t>("uniform", wt::f_t(.5));
+
+  auto constant_texture =
+    std::make_shared<wt::texture::constant_t>("constant", spectrum_uniform);
+
+  auto bsdf_diffuse = std::make_shared<wt::bsdf::diffuse_t>("diffuse", constant_texture);
   
-  std::cout << "Simulating at a wavelength of " << value_cast<wt::u::m>(lambda) << " (" << value_cast<wt::u::Hz>(f) <<")" << std::endl;
+  auto area_emitter =
+      std::make_shared<wt::emitter::area_t>("emitter1", nullptr, spectrum_uniform);
 
-  auto area_emitter = wt::emitter::area_t("emitter1", nullptr, nullptr);
-  
-  auto sourcing_geometry = area_emitter.sourcing_geometry(k);
+  auto area = wt::shape_t("area_emitter", bsdf_diffuse, area_emitter, sphere);
 
-  std::cout << "sourcing_geometry.initial_spatial_lengths = ["
-            << sourcing_geometry.initial_spatial_lengths.x << ", "
-            << sourcing_geometry.initial_spatial_lengths.y << "]" << std::endl;
+  auto sampler = wt::sampler::uniform_t("sampler");
 
-  auto origin = wt::pqvec3_t::zero();
-  auto direction = wt::dir3_t{0, 0, 1};
+  auto emitter_sample = area_emitter->sample(sampler, k);
+  // auto beam = emitter_sample.beam;
 
-  auto ray = wt::ray_t{origin, direction};
+  // std::cout << "cone.get_tan_alpha() = " << beam.get_envelope().get_tan_alpha()
+  //           << std::endl;
 
-  wt::length_t self_intersection_distance = 0 * wt::u::m;
-  auto cone = sourcing_geometry.envelope(ray, self_intersection_distance);
+  // auto dist = 1000 * wt::u::m;
+  // auto fp = beam.footprint(dist) / wt::u::m; // make dimensionless
 
-  std::cout << "cone.get_tan_alpha() = " << cone.get_tan_alpha() << std::endl;
-
-  auto beam = wt::importance_intensity_beam_t{cone, scale, k};
-
-  auto dist = 1000 * wt::u::m;
-  auto fp = beam.footprint(dist) / wt::u::m; // make dimensionless
-
-  std::cout << "Beam footprint (at " << dist << ") = [" << fp.x << ", " << fp.y
-            << ", " << fp.z << "]" << std::endl;
+  // std::cout << "Beam footprint (at " << dist << ") = [" << fp.x << ", " << fp.y
+  //           << ", " << fp.z << "]" << std::endl;
 };
