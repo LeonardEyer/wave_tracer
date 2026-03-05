@@ -296,7 +296,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         -Wdisabled-optimization
         -Wno-psabi
     )
-    target_link_options(wave_coure PUBLIC
+    target_link_options(wave_core PUBLIC
         -Wno-psabi
     )
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

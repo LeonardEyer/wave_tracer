@@ -75,13 +75,14 @@ private:
 
     const shape_t* shape = nullptr;
 
+public:
+  
     /**
      * @brief Updates the shape associated with this area emitter.
      *        Expected to be called from friend ``shape_t`` when assigning as area emitter to a shape.
      */
     void set_shape(const wt_context_t& ctx, const shape_t* shape);
 
-public:
     /**
      * @brief Constructs an area emitter.
      * 
