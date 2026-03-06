@@ -133,6 +133,47 @@ sensor_sample_t virtual_plane_sensor_t::sample(sampler::sampler_t& sampler,
     };
 }
 
+sensor_sample_t virtual_plane_sensor_t::sample_toward(sampler::sampler_t& sampler,
+                                                       const vec3u32_t& sensor_element,
+                                                       const pqvec3_t& wp,
+                                                       const wavenumber_t k) const noexcept {
+    const auto element_offset = vec3_t{ sampler.r2() - vec2_t{ .5,.5 }, 0 };
+    const auto p = position_for_element(sensor::sensor_element_sample_t{ .element=sensor_element, .offset=element_offset });
+    const auto recp_ppd = area();
+
+    const auto &frame = this->frame();
+    
+    // fixed direction toward wp instead of sampled
+    const auto wdl = wp - p;
+    const auto wo = dir3_t{ wdl / m::length(wdl) };
+    const auto wo_local = frame.to_local(wo);
+
+    std::cout << "wo = [" << wo.x << ", " << wo.y << ", " << wo.z << "]" << std::endl;
+    std::cout << "wo_local = [" << wo_local.x << ", " << wo_local.y << ", " << wo_local.z << "]" << std::endl;
+    
+    // evaluate (don't sample) cosine pdf at this direction
+    const auto dpd = solid_angle_density_t{
+        sampler.cosine_hemisphere_pdf(wo_local.z) / u::ang::sr};
+
+    std::cout << "sampler.cosine_hemisphere_pdf(wo_local.z) = " << sampler.cosine_hemisphere_pdf(wo_local.z) << std::endl;
+    
+    const auto P = ray_t{ p, wo };
+    const auto beam = Se(P, k) * recp_ppd * (dpd>zero ? 1/dpd : solid_angle_t::zero());
+    const auto surface = intersection_surface_t{frame.n, p};
+    
+    return sensor_sample_t{
+      .sensor = this, .beam = beam, .ppd = area_density_t{1 / recp_ppd},
+      .dpd = dpd,
+      
+      .element = sensor_element_sample_t{
+	.element = sensor_element,
+	.offset  = element_offset,
+      },
+
+      .surface = surface,
+    };
+}
+
 sensor_direct_sample_t virtual_plane_sensor_t::sample_direct(sampler::sampler_t& sampler,
                                                             const pqvec3_t& wp,
                                                             const wavenumber_t k) const noexcept {

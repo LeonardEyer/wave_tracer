@@ -189,6 +189,11 @@ public:
                                          const vec3u32_t& sensor_element,
                                          const wavenumber_t k) const noexcept override;
 
+
+    [[nodiscard]] sensor_sample_t
+    sample_toward(sampler::sampler_t &sampler, const vec3u32_t &sensor_element,
+		const pqvec3_t &wp, const wavenumber_t k) const noexcept;
+  
     /**
      * @brief Samples a direct connection to a world position
      * @param wp world position
