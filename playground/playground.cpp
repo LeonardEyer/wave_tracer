@@ -46,25 +46,11 @@ int main(int argc, char **argv) {
   auto sphere = wt::mesh::sphere_t::create("sphere", ctx, p_emitter,
                                            1. * wt::u::mm, wt::transform_d_t{});
 
-  auto reflectance = .5;
   auto spectrum_uniform =
       std::make_shared<wt::spectrum::uniform_t>("uniform", wt::f_t(1));
-  auto specrum_uniform2 = std::make_shared<wt::spectrum::uniform_t>(
-      "uniform", wt::f_t(reflectance));
-  auto constant_texture =
-      std::make_shared<wt::texture::constant_t>("constant", spectrum_uniform);
-  auto bsdf_diffuse =
-      std::make_shared<wt::bsdf::diffuse_t>("diffuse", constant_texture);
 
-  auto area_emitter = std::make_shared<wt::emitter::area_t>("emitter1", nullptr,
-                                                            spectrum_uniform);
-
-  auto area = wt::shape_t("area_emitter", bsdf_diffuse, area_emitter, sphere);
-
-  auto point = wt::emitter::point_t("point_emitter", p_emitter, spectrum_uniform, std::nullopt);
-
-  // hack (actually private member)
-  area_emitter->set_shape(ctx, &area);
+  auto point = wt::emitter::point_t("point_emitter", p_emitter,
+                                    spectrum_uniform, std::nullopt);
 
   // ----------------------------- Sensor setup -----------------------------
 
@@ -101,17 +87,25 @@ int main(int argc, char **argv) {
   auto sensor_sample = virtual_sensor->sample_toward(
       sampler, wt::vec3u32_t(0, 0, 0), p_surface, k);
 
-  std::cout << "sensor_sample.beam.intensity() = " << sensor_sample.beam.intensity() << std::endl;
+  std::cout << "sensor_sample.beam.intensity() = "
+            << sensor_sample.beam.intensity() << std::endl;
 
-  auto emitter_sample = area_emitter->sample_direct(sampler, p_surface, k);
+  auto emitter_sample = point.sample_direct(sampler, p_surface, k);
 
-  std::cout << "emitter_sample.beam.intensity() = " << emitter_sample.beam.intensity() << std::endl;
+  std::cout << "emitter_sample.beam.intensity() = "
+            << emitter_sample.beam.intensity() << std::endl;
 
-  auto bsdf_result = wt::bsdf::bsdf_result_t{.M = wt::m::inv_pi * reflectance *
-                                                  wt::mueller_operator_t()};
+  const auto reflectance = 1.0;
+  const auto cos_theta = wt::m::dot(wo, wt::dir3_t(0, 0, 1));
+  auto bsdf_result = wt::bsdf::bsdf_result_t{.M = cos_theta * wt::m::inv_pi * reflectance *
+					     wt::mueller_operator_t::perfect_depolarizer()};
 
   sensor_sample.beam.transform_surface_interaction(floor_intersect, wo,
                                                    bsdf_result, 1);
+
+    std::cout << "(after reflection) sensor_sample.beam.intensity() = "
+            << sensor_sample.beam.intensity() << std::endl;
+
 
   std::cout << "wt::beam::integrate_beams(sensor_sample.beam, "
                "emitter_sample.beam).intensity() = "
@@ -120,20 +114,11 @@ int main(int argc, char **argv) {
                    .intensity()
             << std::endl;
 
-  std::cout << emitter_sample.dpd.density() << std::endl;
+  // auto dist = 1000 * wt::u::m;
+  // auto fp = beam.footprint(dist); // / wt::u::m; // make dimensionless
 
-  auto beam = emitter_sample.beam;
-
-  std::cout << "beam.dir() = [" << beam.dir().x << ", " << beam.dir().y << ", "
-            << beam.dir().z << "]" << std::endl;
-  std::cout << "cone.get_tan_alpha() = " << beam.get_envelope().get_tan_alpha()
-            << std::endl;
-
-  auto dist = 1000 * wt::u::m;
-  auto fp = beam.footprint(dist); // / wt::u::m; // make dimensionless
-
-  std::cout << "Beam footprint (at " << dist << ") = [" << fp.x << ", " << fp.y
-            << ", " << fp.z << "]" << std::endl;
+  // std::cout << "Beam footprint (at " << dist << ") = [" << fp.x << ", " << fp.y
+  //           << ", " << fp.z << "]" << std::endl;
 
   // // === QUERY RADIOMETRIC POWER ===
   // // Get emitter's spectral power at the wavenumber
